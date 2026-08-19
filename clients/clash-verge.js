@@ -102,6 +102,32 @@ const ruleProviders = {
   global: textProvider("global", `${blackmatrix}/Global/Global.list`)
 };
 
+function buildGroupTargets(kind, transportTargets) {
+  const serviceTargets = [
+    "🔰 模式选择",
+    ...transportTargets,
+    "🔗 全局直连",
+    "❌ 全局拦截",
+    "DIRECT"
+  ];
+
+  switch (kind) {
+    case "reject":
+      return ["REJECT", "DIRECT"];
+    case "direct":
+      return ["DIRECT", ...transportTargets, "REJECT"];
+    case "mode":
+      return [...transportTargets, "🔗 全局直连", "❌ 全局拦截", "DIRECT"];
+    case "direct-service":
+      return [
+        "🔗 全局直连",
+        ...serviceTargets.filter((target) => target !== "🔗 全局直连")
+      ];
+    default:
+      return serviceTargets;
+  }
+}
+
 function main(config) {
   const originalRules = Array.isArray(config.rules) ? config.rules : [];
   config.ipv6 = false;
@@ -118,55 +144,45 @@ function main(config) {
   const existingGroups = new Set(
     (config["proxy-groups"] || []).map((group) => group && group.name).filter(Boolean)
   );
-  const availableTargets = new Set([
-    ...(config.proxies || []).map((proxy) => proxy && proxy.name).filter(Boolean),
-    ...existingGroups,
-    "DIRECT",
-    "REJECT"
-  ]);
-  const defaultTargets = [
-    "🔰 模式选择",
+  const transportTargets = [
     "⚙️ 节点选择",
     "🕊️ 落地节点",
     "♻️ 延迟选优",
     "🚑 故障转移",
-    "🔗 全局直连",
-    "DIRECT"
-  ].filter((name) => availableTargets.has(name));
+    "⚖️ 负载均衡(散列)",
+    "☁️ 负载均衡(轮询)"
+  ].filter((name) => existingGroups.has(name));
   const requiredGroups = [
-    { name: "🔰 模式选择", direct: false },
-    { name: "🔗 全局直连", direct: true },
-    { name: "🏠 私有网络", direct: true },
-    { name: "🧱 DNS 防泄露", direct: false, reject: true },
-    { name: "🛑 广告拦截", direct: false, reject: true },
-    { name: "📹 油管视频", direct: false },
-    { name: "📢 谷歌服务", direct: false },
-    { name: "📲 电报消息", direct: false },
-    { name: "🐱 代码托管", direct: false },
-    { name: "Ⓜ️ 微软服务", direct: false },
-    { name: "💸 OpenAI", direct: false },
-    { name: "💵 Claude", direct: false },
-    { name: "🧠 XAI", direct: false },
-    { name: "🔎 Perplexity", direct: false },
-    { name: "🍎 苹果推送", direct: false },
-    { name: "🍎 苹果服务", direct: true },
-    { name: "📈 券商服务", direct: false },
-    { name: "🔒 国内服务", direct: true },
-    { name: "🌍 非中国", direct: false },
-    { name: "🐟 漏网之鱼", direct: false }
+    { name: "🔗 全局直连", kind: "direct" },
+    { name: "❌ 全局拦截", kind: "reject" },
+    { name: "🔰 模式选择", kind: "mode" },
+    { name: "🏠 私有网络", kind: "direct-service" },
+    { name: "🧱 DNS 防泄露", kind: "reject" },
+    { name: "🛑 广告拦截", kind: "reject" },
+    { name: "📹 油管视频", kind: "service" },
+    { name: "📢 谷歌服务", kind: "service" },
+    { name: "📲 电报消息", kind: "service" },
+    { name: "🐱 代码托管", kind: "service" },
+    { name: "Ⓜ️ 微软服务", kind: "service" },
+    { name: "💸 OpenAI", kind: "service" },
+    { name: "💵 Claude", kind: "service" },
+    { name: "🧠 XAI", kind: "service" },
+    { name: "🔎 Perplexity", kind: "service" },
+    { name: "🍎 苹果推送", kind: "service" },
+    { name: "🍎 苹果服务", kind: "direct-service" },
+    { name: "📈 券商服务", kind: "service" },
+    { name: "🔒 国内服务", kind: "direct-service" },
+    { name: "🌍 非中国", kind: "service" },
+    { name: "🐟 漏网之鱼", kind: "service" }
   ];
   config["proxy-groups"] = config["proxy-groups"] || [];
-  for (const { name, direct, reject = false } of requiredGroups) {
+  for (const { name, kind } of requiredGroups) {
     if (!existingGroups.has(name)) {
       config["proxy-groups"].push({
         name,
         type: "select",
-        "include-all": !reject,
-        proxies: reject
-          ? ["REJECT", "DIRECT"]
-          : direct
-          ? ["DIRECT", ...defaultTargets.filter((target) => target !== "DIRECT")]
-          : defaultTargets.length ? defaultTargets : ["DIRECT"]
+        "include-all": kind !== "reject",
+        proxies: buildGroupTargets(kind, transportTargets)
       });
     }
   }

@@ -99,6 +99,8 @@ const additionalProxyProviders = {
 | 策略组 | 类型 | 说明 |
 |--------|------|------|
 | 🚀 节点选择 | 手动选择 | 主策略，可选内置代理、地区分组或直连 |
+| 🔗 全局直连 | 手动选择 | 默认 DIRECT，作为所有业务组的统一直连入口 |
+| ❌ 全局拦截 | 手动选择 | 默认 REJECT，用于临时阻断业务组流量 |
 | 🇭🇰 香港节点 | 自动测速 | 按节点名关键词匹配香港节点 |
 | 🇹🇼 台湾节点 | 自动测速 | 按节点名关键词匹配台湾节点 |
 | 🇯🇵 日本节点 | 自动测速 | 按节点名关键词匹配日本节点 |
@@ -180,6 +182,7 @@ WebRTC/STUN 常用 UDP 端口默认被拒绝，视频会议和点对点功能可
 
 ```bash
 node --check clients/clash-verge.js
+node tests/validate_clash_runtime.js
 python3 tests/validate_rules.py
 python3 tests/validate_clients.py
 ```

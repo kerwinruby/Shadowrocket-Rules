@@ -62,8 +62,11 @@ def validate_clash(errors: list[str]) -> None:
         fail(errors, "Clash 未启用 fake-ip")
     if '...(config["proxy-providers"] || {})' not in text or '...additionalProxyProviders' not in text:
         fail(errors, "Clash 未保留并合并多个代理订阅")
-    if '"include-all": !reject' not in text:
+    if '"include-all": kind !== "reject"' not in text:
         fail(errors, "Clash 自动策略组未纳入所有订阅节点")
+    for group in ("🔗 全局直连", "❌ 全局拦截"):
+        if group not in text or group not in SHADOWROCKET.read_text(encoding="utf-8"):
+            fail(errors, f"两端缺少基础策略组: {group}")
     for port in ("3478", "5349", "19302-19309"):
         if f"(DST-PORT,{port})" not in text:
             fail(errors, f"Clash 缺少 WebRTC UDP 拒绝规则: {port}")
