@@ -40,6 +40,10 @@ def validate_shadowrocket(errors: list[str]) -> None:
         rule = f"AND,((PROTOCOL,UDP),(DEST-PORT,{port})),REJECT"
         if rule not in text:
             fail(errors, f"Shadowrocket 缺少 WebRTC UDP 拒绝规则: {port}")
+    if "BlockHttpDNS/BlockHttpDNS.list,REJECT" not in text:
+        fail(errors, "Shadowrocket HTTPDNS 防泄露规则必须直接 REJECT")
+    if "🧱 DNS 防泄露 =" in text:
+        fail(errors, "Shadowrocket 不应将 DNS 防泄露暴露为可切换代理组")
 
     for line in lines:
         if not line.startswith("RULE-SET,") or RAW_PREFIX not in line:
@@ -70,6 +74,10 @@ def validate_clash(errors: list[str]) -> None:
     for port in ("3478", "5349", "19302-19309"):
         if f"(DST-PORT,{port})" not in text:
             fail(errors, f"Clash 缺少 WebRTC UDP 拒绝规则: {port}")
+    if '"RULE-SET,blockHttpDns,REJECT"' not in text:
+        fail(errors, "Clash HTTPDNS 防泄露规则必须直接 REJECT")
+    if '{ name: "🧱 DNS 防泄露"' in text:
+        fail(errors, "Clash 不应将 DNS 防泄露暴露为可切换代理组")
     if SENSITIVE.search(text):
         fail(errors, "Clash 脚本可能包含敏感凭据")
 

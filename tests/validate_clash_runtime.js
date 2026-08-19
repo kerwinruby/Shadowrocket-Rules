@@ -36,6 +36,7 @@ const reject = groups.get("❌ 全局拦截");
 
 assert.ok(direct, "未自动创建全局直连组");
 assert.ok(reject, "未自动创建全局拦截组");
+assert.ok(!groups.has("🧱 DNS 防泄露"), "DNS 防泄露不应是可切换代理组");
 assert.equal(direct.proxies[0], "DIRECT", "全局直连的默认策略必须为 DIRECT");
 assert.equal(reject.proxies[0], "REJECT", "全局拦截的默认策略必须为 REJECT");
 assert.equal(groups.get("⚙️ 节点选择"), originalGroups[0], "不应覆盖订阅已有策略组");
@@ -82,6 +83,7 @@ for (const target of ruleTargets) {
   assert.ok(builtins.has(target) || groups.has(target), `规则引用了不存在的策略 ${target}`);
 }
 assert.ok(result.rules.includes("DOMAIN,example.com,DIRECT"), "应保留订阅原有的非终结规则");
+assert.ok(result.rules.includes("RULE-SET,blockHttpDns,REJECT"), "HTTPDNS 必须直接拒绝");
 assert.ok(!result.rules.includes("MATCH,DIRECT"), "应移除订阅原有的终结规则");
 assert.equal(result.rules.at(-1), "MATCH,🐟 漏网之鱼", "统一兜底规则必须位于末尾");
 

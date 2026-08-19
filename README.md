@@ -31,7 +31,6 @@
 
 | 服务 | 默认策略 | 可选策略 |
 |------|----------|----------|
-| 🧱 DNS 防泄露 | REJECT | 节点选择、DIRECT |
 | 🔍 谷歌服务 | 🇯🇵 日本节点 | 🇭🇰 香港节点、节点选择、PROXY、DIRECT |
 | 💸 OpenAI | 🇺🇸 美国节点 | 节点选择、PROXY、DIRECT |
 | 💵 Claude | 🇺🇸 美国节点 | 节点选择、PROXY、DIRECT |
@@ -113,7 +112,7 @@ const additionalProxyProviders = {
 
 | 优先级 | 服务 | 默认策略 |
 |--------|------|----------|
-| 1 | 🧱 DNS 防泄露（HTTPDNS） | REJECT |
+| 1 | HTTPDNS 防泄露（不可切换） | REJECT |
 | 2 | 🛑 广告拦截 | REJECT |
 | 3 | 💸 OpenAI / 💵 Claude / 🧠 XAI / 🔎 Perplexity | 美国节点 |
 | 4 | 🔍 谷歌服务（含 Gemini） | 日本节点，可手动切香港节点 |
@@ -142,7 +141,7 @@ const additionalProxyProviders = {
 
 - DNS：主用 AliDNS + 腾讯 DoH，备用 Cloudflare + Google DoH，均不回退系统 DNS
 - DNS 劫持：拦截常见硬编码 53 端口 DNS，防止应用绕过规则
-- HTTPDNS 拦截：引用 blackmatrix7 `BlockHttpDNS`，阻止 App 通过内置 HTTPDNS 绕过系统解析
+- HTTPDNS 拦截：引用 blackmatrix7 `BlockHttpDNS` 并直接 `REJECT`，不经过可切换代理组
 - QUIC 屏蔽：对代理连接屏蔽 UDP/443，强制回退 HTTP/2
 - 本地服务保护：`localhost.weixin.qq.com` 固定解析到 `127.0.0.1` 并强制直连，避免 fake-IP 影响微信本地回调
 - 腾讯云 IM：`shortconn.im.qcloud.com` 前置归入国内服务，避免被券商分流规则误挂到香港节点
