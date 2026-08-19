@@ -102,6 +102,53 @@ const ruleProviders = {
   global: textProvider("global", `${blackmatrix}/Global/Global.list`)
 };
 
+const regionGroupFilters = {
+  "🇭🇰 香港节点": "🇭🇰|HK|Hong|香港|深港|沪港|京港|港",
+  "🇹🇼 台湾节点": "🇹🇼|TW|TWN|Taiwan|Taipei|台湾|台灣|台北|台中|新北|彰化",
+  "🇯🇵 日本节点": "🇯🇵|JP|Japan|Tokyo|日本|东京|大阪",
+  "🇺🇸 美国节点": "🇺🇸|US|USA|America|United States|美国|凤凰城|洛杉矶|西雅图|芝加哥|纽约|沪美|美"
+};
+const knownRegionFilter = `(?i)${Object.values(regionGroupFilters).join("|")}`;
+const regionGroupNames = [...Object.keys(regionGroupFilters), "🌐 其他节点"];
+
+function buildGroupTargets(kind, transportTargets, preferredTargets = []) {
+  const serviceTargets = [
+    "🚀 节点选择",
+    ...transportTargets,
+    "🔗 全局直连",
+    "❌ 全局拦截",
+    "DIRECT"
+  ];
+  const preferredServiceTargets = [
+    ...preferredTargets,
+    ...serviceTargets.filter((target) => !preferredTargets.includes(target))
+  ];
+
+  switch (kind) {
+    case "reject":
+      return ["REJECT", "DIRECT"];
+    case "block-service":
+      return ["❌ 全局拦截", "🔗 全局直连", "🚀 节点选择"];
+    case "direct":
+      return ["DIRECT", ...transportTargets, "REJECT"];
+    case "mode":
+      return [
+        ...transportTargets,
+        "🔗 全局直连",
+        "❌ 全局拦截",
+        ...regionGroupNames,
+        "DIRECT"
+      ];
+    case "direct-service":
+      return [
+        "🔗 全局直连",
+        ...serviceTargets.filter((target) => target !== "🔗 全局直连")
+      ];
+    default:
+      return preferredServiceTargets;
+  }
+}
+
 function main(config) {
   const originalRules = Array.isArray(config.rules) ? config.rules : [];
   config.ipv6 = false;
@@ -118,57 +165,62 @@ function main(config) {
   const existingGroups = new Set(
     (config["proxy-groups"] || []).map((group) => group && group.name).filter(Boolean)
   );
-  const availableTargets = new Set([
-    ...(config.proxies || []).map((proxy) => proxy && proxy.name).filter(Boolean),
-    ...existingGroups,
-    "DIRECT",
-    "REJECT"
-  ]);
-  const defaultTargets = [
-    "🔰 模式选择",
+  const transportTargets = [
     "⚙️ 节点选择",
     "🕊️ 落地节点",
     "♻️ 延迟选优",
     "🚑 故障转移",
-    "🔗 全局直连",
-    "DIRECT"
-  ].filter((name) => availableTargets.has(name));
+    "⚖️ 负载均衡(散列)",
+    "☁️ 负载均衡(轮询)"
+  ].filter((name) => existingGroups.has(name));
   const requiredGroups = [
-    { name: "🔰 模式选择", direct: false },
-    { name: "🔗 全局直连", direct: true },
-    { name: "🏠 私有网络", direct: true },
-    { name: "🧱 DNS 防泄露", direct: false, reject: true },
-    { name: "🛑 广告拦截", direct: false, reject: true },
-    { name: "📹 油管视频", direct: false },
-    { name: "📢 谷歌服务", direct: false },
-    { name: "📲 电报消息", direct: false },
-    { name: "🐱 代码托管", direct: false },
-    { name: "Ⓜ️ 微软服务", direct: false },
-    { name: "💸 OpenAI", direct: false },
-    { name: "💵 Claude", direct: false },
-    { name: "🧠 XAI", direct: false },
-    { name: "🔎 Perplexity", direct: false },
-    { name: "🍎 苹果推送", direct: false },
-    { name: "🍎 苹果服务", direct: true },
-    { name: "📈 券商服务", direct: false },
-    { name: "🔒 国内服务", direct: true },
-    { name: "🌍 非中国", direct: false },
-    { name: "🐟 漏网之鱼", direct: false }
+    { name: "🔗 全局直连", kind: "direct" },
+    { name: "❌ 全局拦截", kind: "reject" },
+    ...regionGroupNames.map((name) => ({ name, kind: "region" })),
+    { name: "🚀 节点选择", kind: "mode" },
+    { name: "🏠 私有网络", kind: "direct-service" },
+    { name: "🛑 广告拦截", kind: "block-service" },
+    { name: "📹 油管视频", kind: "service" },
+    { name: "🔍 谷歌服务", kind: "service", preferred: ["🇯🇵 日本节点", "🇭🇰 香港节点"] },
+    { name: "📲 电报消息", kind: "service" },
+    { name: "🐱 代码托管", kind: "service" },
+    { name: "Ⓜ️ 微软服务", kind: "service" },
+    { name: "💸 OpenAI", kind: "service", preferred: ["🇺🇸 美国节点"] },
+    { name: "💵 Claude", kind: "service", preferred: ["🇺🇸 美国节点"] },
+    { name: "🧠 XAI", kind: "service", preferred: ["🇺🇸 美国节点"] },
+    { name: "🔎 Perplexity", kind: "service", preferred: ["🇺🇸 美国节点"] },
+    { name: "🍎 苹果推送", kind: "service" },
+    { name: "🍏 苹果服务", kind: "direct-service" },
+    { name: "📈 券商服务", kind: "service", preferred: ["🇭🇰 香港节点"] },
+    { name: "🔒 国内服务", kind: "direct-service" },
+    { name: "🌍 非中国", kind: "service" },
+    { name: "🐟 漏网之鱼", kind: "service" }
   ];
-  config["proxy-groups"] = config["proxy-groups"] || [];
-  for (const { name, direct, reject = false } of requiredGroups) {
-    if (!existingGroups.has(name)) {
-      config["proxy-groups"].push({
-        name,
-        type: "select",
-        "include-all": !reject,
-        proxies: reject
-          ? ["REJECT", "DIRECT"]
-          : direct
-          ? ["DIRECT", ...defaultTargets.filter((target) => target !== "DIRECT")]
-          : defaultTargets.length ? defaultTargets : ["DIRECT"]
-      });
-    }
+  const requiredGroupNames = new Set(requiredGroups.map((group) => group.name));
+  config["proxy-groups"] = (config["proxy-groups"] || []).filter(
+    (group) => group && !requiredGroupNames.has(group.name)
+  );
+  for (const { name, kind, preferred } of requiredGroups) {
+    const group = kind === "region"
+      ? {
+          name,
+          type: "url-test",
+          "include-all": true,
+          ...(name === "🌐 其他节点"
+            ? { "exclude-filter": knownRegionFilter }
+            : { filter: `(?i)${regionGroupFilters[name]}` }),
+          url: "https://www.gstatic.com/generate_204",
+          interval: 600,
+          tolerance: 50,
+          timeout: 3000
+        }
+      : {
+          name,
+          type: "select",
+          "include-all": !["reject", "block-service"].includes(kind),
+          proxies: buildGroupTargets(kind, transportTargets, preferred)
+        };
+    config["proxy-groups"].push(group);
   }
 
   // 规则顺序必须与 clients/Shadowrocket.conf 一致；首次命中后停止。
@@ -180,11 +232,13 @@ function main(config) {
   );
   config.rules = [
     "RULE-SET,customDirect,🔗 全局直连",
-    "RULE-SET,customProxy,🔰 模式选择",
-    "RULE-SET,customGoogle,📢 谷歌服务",
+    "RULE-SET,customProxy,🚀 节点选择",
+    "RULE-SET,customGoogle,🔍 谷歌服务",
     "RULE-SET,customCode,🐱 代码托管",
     "RULE-SET,lan,🏠 私有网络",
-    "RULE-SET,blockHttpDns,🧱 DNS 防泄露",
+    "DOMAIN,shortconn.im.qcloud.com,🔒 国内服务",
+    "IP-CIDR,208.54.0.0/16,🇺🇸 美国节点,no-resolve",
+    "RULE-SET,blockHttpDns,REJECT",
     "RULE-SET,advertising,🛑 广告拦截",
     "RULE-SET,webrtc,REJECT",
     "AND,((NETWORK,UDP),(DST-PORT,3478)),REJECT",
@@ -192,13 +246,13 @@ function main(config) {
     "AND,((NETWORK,UDP),(DST-PORT,19302-19309)),REJECT",
     "DOMAIN,translate.googleapis.com,📹 油管视频",
     "DOMAIN,translate-pa.googleapis.com,📹 油管视频",
+    "RULE-SET,youtube,📹 油管视频",
     "RULE-SET,openai,💸 OpenAI",
     "RULE-SET,anthropic,💵 Claude",
     "RULE-SET,xai,🧠 XAI",
     "RULE-SET,perplexity,🔎 Perplexity",
-    "RULE-SET,googleGemini,📢 谷歌服务",
-    "RULE-SET,google,📢 谷歌服务",
-    "RULE-SET,youtube,📹 油管视频",
+    "RULE-SET,googleGemini,🔍 谷歌服务",
+    "RULE-SET,google,🔍 谷歌服务",
     "RULE-SET,bilibili,🔒 国内服务",
     "RULE-SET,telegram,📲 电报消息",
     "RULE-SET,github,🐱 代码托管",
@@ -207,7 +261,7 @@ function main(config) {
     "RULE-SET,microsoft,Ⓜ️ 微软服务",
     "RULE-SET,broker,📈 券商服务",
     "RULE-SET,applePush,🍎 苹果推送",
-    "RULE-SET,apple,🍎 苹果服务",
+    "RULE-SET,apple,🍏 苹果服务",
     ...preservedRules,
     "RULE-SET,china,🔒 国内服务",
     "RULE-SET,global,🌍 非中国",

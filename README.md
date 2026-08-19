@@ -31,7 +31,6 @@
 
 | 服务 | 默认策略 | 可选策略 |
 |------|----------|----------|
-| 🧱 DNS 防泄露 | REJECT | 节点选择、DIRECT |
 | 🔍 谷歌服务 | 🇯🇵 日本节点 | 🇭🇰 香港节点、节点选择、PROXY、DIRECT |
 | 💸 OpenAI | 🇺🇸 美国节点 | 节点选择、PROXY、DIRECT |
 | 💵 Claude | 🇺🇸 美国节点 | 节点选择、PROXY、DIRECT |
@@ -66,6 +65,8 @@
 
 脚本会覆盖 DNS 配置、加载与 Shadowrocket 相同的公共规则集，并保留订阅原有的非终结规则。原规则中的 `MATCH`、`FINAL` 和 `GEOIP,CN` 会由统一终结规则替换。
 
+脚本拥有并重建“策略组说明”中的统一业务组，订阅内其他名称的代理组仍会保留。若订阅已有同名业务组，其内容会被统一契约替换，以避免两端默认出口漂移。
+
 #### Clash 多订阅
 
 Clash Verge 中多个订阅配置默认互相独立。需要同时使用多个订阅节点时，在本地脚本顶部配置 `additionalProxyProviders`：
@@ -99,6 +100,8 @@ const additionalProxyProviders = {
 | 策略组 | 类型 | 说明 |
 |--------|------|------|
 | 🚀 节点选择 | 手动选择 | 主策略，可选内置代理、地区分组或直连 |
+| 🔗 全局直连 | 手动选择 | 默认 DIRECT，作为所有业务组的统一直连入口 |
+| ❌ 全局拦截 | 手动选择 | 默认 REJECT，用于临时阻断业务组流量 |
 | 🇭🇰 香港节点 | 自动测速 | 按节点名关键词匹配香港节点 |
 | 🇹🇼 台湾节点 | 自动测速 | 按节点名关键词匹配台湾节点 |
 | 🇯🇵 日本节点 | 自动测速 | 按节点名关键词匹配日本节点 |
@@ -111,7 +114,7 @@ const additionalProxyProviders = {
 
 | 优先级 | 服务 | 默认策略 |
 |--------|------|----------|
-| 1 | 🧱 DNS 防泄露（HTTPDNS） | REJECT |
+| 1 | HTTPDNS 防泄露（不可切换） | REJECT |
 | 2 | 🛑 广告拦截 | REJECT |
 | 3 | 💸 OpenAI / 💵 Claude / 🧠 XAI / 🔎 Perplexity | 美国节点 |
 | 4 | 🔍 谷歌服务（含 Gemini） | 日本节点，可手动切香港节点 |
@@ -140,7 +143,7 @@ const additionalProxyProviders = {
 
 - DNS：主用 AliDNS + 腾讯 DoH，备用 Cloudflare + Google DoH，均不回退系统 DNS
 - DNS 劫持：拦截常见硬编码 53 端口 DNS，防止应用绕过规则
-- HTTPDNS 拦截：引用 blackmatrix7 `BlockHttpDNS`，阻止 App 通过内置 HTTPDNS 绕过系统解析
+- HTTPDNS 拦截：引用 blackmatrix7 `BlockHttpDNS` 并直接 `REJECT`，不经过可切换代理组
 - QUIC 屏蔽：对代理连接屏蔽 UDP/443，强制回退 HTTP/2
 - 本地服务保护：`localhost.weixin.qq.com` 固定解析到 `127.0.0.1` 并强制直连，避免 fake-IP 影响微信本地回调
 - 腾讯云 IM：`shortconn.im.qcloud.com` 前置归入国内服务，避免被券商分流规则误挂到香港节点
@@ -180,6 +183,7 @@ WebRTC/STUN 常用 UDP 端口默认被拒绝，视频会议和点对点功能可
 
 ```bash
 node --check clients/clash-verge.js
+node tests/validate_clash_runtime.js
 python3 tests/validate_rules.py
 python3 tests/validate_clients.py
 ```
