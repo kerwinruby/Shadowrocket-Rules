@@ -34,6 +34,31 @@ const groups = new Map(result["proxy-groups"].map((group) => [group.name, group]
 const direct = groups.get("🔗 全局直连");
 const reject = groups.get("❌ 全局拦截");
 
+assert.equal(result.ipv6, false, "Clash 全局 IPv6 出口必须关闭");
+assert.equal(result.dns.enable, true, "Clash DNS 必须启用");
+assert.equal(result.dns.ipv6, false, "Clash DNS 不应返回 IPv6 地址");
+assert.equal(result.dns["enhanced-mode"], "fake-ip", "Clash DNS 必须使用 fake-ip 模式");
+assert.equal(result.dns["respect-rules"], true, "DNS 查询必须遵循分流规则");
+assert.equal(result.dns["use-system-hosts"], false, "DNS 不应回退系统 hosts");
+assert.equal(
+  result.dns["direct-nameserver-follow-policy"],
+  false,
+  "直连 DNS 不应绕过指定的 DoH"
+);
+
+const dohKeys = ["nameserver", "proxy-server-nameserver", "direct-nameserver"];
+for (const key of dohKeys) {
+  assert.ok(result.dns[key].length > 0, `DNS 配置 ${key} 不得为空`);
+  for (const server of result.dns[key]) {
+    assert.ok(server.startsWith("https://"), `DNS 配置 ${key} 必须全部使用 DoH: ${server}`);
+  }
+}
+for (const servers of Object.values(result.dns["nameserver-policy"])) {
+  for (const server of servers) {
+    assert.ok(server.startsWith("https://"), `DNS 分流策略必须全部使用 DoH: ${server}`);
+  }
+}
+
 assert.ok(direct, "未自动创建全局直连组");
 assert.ok(reject, "未自动创建全局拦截组");
 assert.ok(!groups.has("🧱 DNS 防泄露"), "DNS 防泄露不应是可切换代理组");
