@@ -23,9 +23,14 @@ const originalGroups = transportNames.map((name) => ({
   type: "select",
   proxies: ["测试节点"]
 }));
+const staleModeGroup = {
+  name: "🚀 节点选择",
+  type: "select",
+  proxies: ["旧目标"]
+};
 const config = {
   proxies: [{ name: "测试节点", type: "ss" }],
-  "proxy-groups": originalGroups,
+  "proxy-groups": [...originalGroups, staleModeGroup],
   rules: ["DOMAIN,example.com,DIRECT", "GEOIP,CN,DIRECT", "MATCH,DIRECT"]
 };
 
@@ -33,6 +38,18 @@ const result = context.mainForTest(config);
 const groups = new Map(result["proxy-groups"].map((group) => [group.name, group]));
 const direct = groups.get("🔗 全局直连");
 const reject = groups.get("❌ 全局拦截");
+const canonicalDefaults = new Map([
+  ["💸 OpenAI", "🇺🇸 美国节点"],
+  ["💵 Claude", "🇺🇸 美国节点"],
+  ["🧠 XAI", "🇺🇸 美国节点"],
+  ["🔎 Perplexity", "🇺🇸 美国节点"],
+  ["🔍 谷歌服务", "🇯🇵 日本节点"],
+  ["📈 券商服务", "🇭🇰 香港节点"],
+  ["🍏 苹果服务", "🔗 全局直连"],
+  ["🏠 私有网络", "🔗 全局直连"],
+  ["🔒 国内服务", "🔗 全局直连"],
+  ["🛑 广告拦截", "❌ 全局拦截"]
+]);
 
 assert.equal(result.ipv6, false, "Clash 全局 IPv6 出口必须关闭");
 assert.equal(result.dns.enable, true, "Clash DNS 必须启用");
@@ -65,6 +82,17 @@ assert.ok(!groups.has("🧱 DNS 防泄露"), "DNS 防泄露不应是可切换代
 assert.equal(direct.proxies[0], "DIRECT", "全局直连的默认策略必须为 DIRECT");
 assert.equal(reject.proxies[0], "REJECT", "全局拦截的默认策略必须为 REJECT");
 assert.equal(groups.get("⚙️ 节点选择"), originalGroups[0], "不应覆盖订阅已有策略组");
+assert.notEqual(groups.get("🚀 节点选择"), staleModeGroup, "必须按统一契约重建同名策略组");
+for (const [name, expected] of canonicalDefaults) {
+  assert.equal(groups.get(name)?.proxies[0], expected, `${name} 的默认策略必须为 ${expected}`);
+}
+for (const name of ["🇭🇰 香港节点", "🇹🇼 台湾节点", "🇯🇵 日本节点", "🇺🇸 美国节点", "🌐 其他节点"]) {
+  assert.equal(groups.get(name)?.type, "url-test", `${name} 必须是自动测速组`);
+}
+assert.ok(groups.get("🌐 其他节点")["exclude-filter"], "其他节点必须排除已知地区关键词");
+for (const obsolete of ["🔰 模式选择", "📢 谷歌服务", "🍎 苹果服务"]) {
+  assert.ok(!groups.has(obsolete), `不得生成旧策略组名称 ${obsolete}`);
+}
 
 const builtins = new Set(["DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE"]);
 const proxyNames = new Set(result.proxies.map((proxy) => proxy.name));
