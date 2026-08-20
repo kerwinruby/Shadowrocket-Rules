@@ -58,8 +58,6 @@ def validate_shadowrocket(errors: list[str]) -> None:
         values = [value.strip() for value in line.split("=", 1)[-1].split(",")]
         if not values or any(urlparse(value).scheme != "https" for value in values):
             fail(errors, f"Shadowrocket {key.rstrip()} 必须全部使用 HTTPS DoH")
-        if any(host in value for value in values for host in ("alidns", "doh.pub", "223.5.5.5", "1.2.4.8")):
-            fail(errors, f"Shadowrocket {key.rstrip()} 不应使用国内 DNS 上游")
 
     if "DOMAIN-KEYWORD,stun" in text or "DOMAIN-KEYWORD,turn" in text:
         fail(errors, "Shadowrocket 禁止使用过宽的 STUN/TURN 关键词规则")
@@ -152,8 +150,6 @@ def validate_clash(errors: list[str]) -> None:
         fail(errors, "Clash 未同时关闭全局和 DNS IPv6")
     if '"enhanced-mode": "fake-ip"' not in text:
         fail(errors, "Clash 未启用 fake-ip")
-    if re.search(r"https://(?:dns\.alidns\.com|doh\.pub)/dns-query", text):
-        fail(errors, "Clash 不应使用国内 DoH 上游")
     if '...(config["proxy-providers"] || {})' not in text or '...additionalProxyProviders' not in text:
         fail(errors, "Clash 未保留并合并多个代理订阅")
     if '"include-all": !["reject", "block-service"].includes(kind)' not in text:

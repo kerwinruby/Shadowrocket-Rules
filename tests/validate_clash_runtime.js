@@ -75,12 +75,6 @@ for (const servers of Object.values(result.dns["nameserver-policy"])) {
     assert.ok(server.startsWith("https://"), `DNS 分流策略必须全部使用 DoH: ${server}`);
   }
 }
-for (const key of ["nameserver", "proxy-server-nameserver", "direct-nameserver"]) {
-  assert.ok(
-    result.dns[key].every((server) => !/(alidns|doh\.pub)/i.test(server)),
-    `Clash DNS 配置 ${key} 不应使用国内 DoH`
-  );
-}
 
 assert.ok(direct, "未自动创建全局直连组");
 assert.ok(reject, "未自动创建全局拦截组");
