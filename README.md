@@ -141,14 +141,14 @@ const additionalProxyProviders = {
 
 ## 其他特性
 
-- DNS：Clash 与 Shadowrocket 均使用 Cloudflare、Google、Quad9 DoH，避免 DNS 检测出现国内运营商解析器；不回退系统 DNS
+- DNS：主用 AliDNS + 腾讯 DoH，备用 Cloudflare + Google DoH，均不回退系统 DNS
 - DNS 劫持：拦截常见硬编码 53 端口 DNS，防止应用绕过规则
 - HTTPDNS 拦截：引用 blackmatrix7 `BlockHttpDNS` 并直接 `REJECT`，不经过可切换代理组
 - QUIC 屏蔽：对代理连接屏蔽 UDP/443，强制回退 HTTP/2
 - 本地服务保护：`localhost.weixin.qq.com` 固定解析到 `127.0.0.1` 并强制直连，避免 fake-IP 影响微信本地回调
 - 腾讯云 IM：`shortconn.im.qcloud.com` 前置归入国内服务，避免被券商分流规则误挂到香港节点
 - TUN 直连优化：iCloud Photos / CloudKit / Apple CDN 域名使用系统 DNS 并跳过代理，保留 Apple Push 走代理
-- DNS 上游：仅使用域名形式的境外 DoH，不配置明文 DNS，避免 DNS 查询泄漏；检测页面列出的 Cloudflare/Google IPv6 地址是上游解析器地址，不代表本机 IPv6 出口
+- DNS 上游：仅使用域名形式的 DoH，不配置明文 DNS，避免 DNS 查询泄漏
 - 局域网解析保护：`*.in-addr.arpa`、`*.ip6.arpa`、`*.local` 前置直连并交给系统解析，补充常见 DNS-SD 反查模式，避免 Bonjour / PTR 反查打到公共 DoH
 - TUN 边界：保留 `198.18.0.0/15` 给 fake-IP / TUN 内部使用，不加入排除路由，私网桥接网段仍通过 `10.0.0.0/8`、`192.168.0.0/16` 等排除
 - Apple 推送：默认走代理
@@ -158,7 +158,7 @@ const additionalProxyProviders = {
    - `sandbox.push.apple.com` 
 - Google 防跳转：`google.cn` / `g.cn` 自动 302 到 `google.com`
 - MITM：仅解密 `*.google.cn`
-- IPv6：Shadowrocket 显式关闭 IPv6 出口和 IPv6 优先解析；DNS 检测中出现上游解析器的 IPv6 地址不等于本机存在 IPv6 出口
+- IPv6：Shadowrocket 显式关闭 IPv6 出口和 IPv6 优先解析
 - WebRTC：默认拒绝常见 STUN/TURN 域名及 UDP 3478、5349、19302-19309 端口，不阻断相同端口的 TCP 流量
 
 ## 注意事项
