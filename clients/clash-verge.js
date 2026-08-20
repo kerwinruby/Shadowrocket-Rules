@@ -48,18 +48,18 @@ const dns = {
     "https://dns.quad9.net/dns-query"
   ],
   "proxy-server-nameserver": [
-    "https://dns.alidns.com/dns-query",
-    "https://doh.pub/dns-query"
+    "https://cloudflare-dns.com/dns-query",
+    "https://dns.google/dns-query"
   ],
   "direct-nameserver": [
-    "https://dns.alidns.com/dns-query",
-    "https://doh.pub/dns-query"
+    "https://cloudflare-dns.com/dns-query",
+    "https://dns.google/dns-query"
   ],
   "direct-nameserver-follow-policy": false,
   "nameserver-policy": {
     "geosite:cn": [
-      "https://dns.alidns.com/dns-query",
-      "https://doh.pub/dns-query"
+      "https://cloudflare-dns.com/dns-query",
+      "https://dns.google/dns-query"
     ]
   }
 };
