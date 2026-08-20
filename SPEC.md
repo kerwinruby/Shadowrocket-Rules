@@ -117,15 +117,14 @@ Clash 的落地节点、延迟选优、故障转移和负载均衡属于客户�
 - 全局 `ipv6` 必须为 `false`，禁止 IPv6 出站。
 - 开启 fake-ip，范围固定为 `198.18.0.1/16`。
 - DNS 不返回或使用 IPv6 地址作为出站目标。
-- 国内域名使用国内 DoH。
-- 国外域名使用国外 DoH。
-- `proxy-server-nameserver` 和 `direct-nameserver` 使用国内 DoH。
+- 所有域名统一使用境外 DoH，避免两端因国内/国外上游选择不同而出现 DNS 检测差异。
+- `proxy-server-nameserver` 和 `direct-nameserver` 使用相同的境外 DoH。
 - 不使用 IP 形式的 HTTPS DNS 地址，避免证书/SNI 不匹配。
 
 ### Shadowrocket
 
 - `ipv6 = false` 且 `prefer-ipv6 = false`，禁止 IPv6 出站。
-- 仅使用域名形式的加密 DNS；不得混入明文 DNS。
+- 仅使用域名形式的境外加密 DNS；不得混入国内或明文 DNS 上游。
 - 本地域名和反向解析交给系统 Host/直连处理。
 - 明确记录其无法实现按域名 DNS 分流的限制。
 
